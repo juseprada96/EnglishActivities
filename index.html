@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mall After Dark · WH Question Escape Room</title>
+  <meta name="description" content="An English escape room for A1.2 students: find the WH questions, collect the code numbers and open every door." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌙</text></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="bg-glow bg-glow-a" aria-hidden="true"></div>
+  <div class="bg-glow bg-glow-b" aria-hidden="true"></div>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <div class="app">
+
+    <!-- ============================ HEADER ============================ -->
+    <header class="topbar">
+      <button id="brandHome" class="brand" type="button">
+        <span class="brand-icon">🕵️</span>
+        <span class="brand-text">
+          <strong>Mall After Dark</strong>
+          <small>WH Question Escape Room</small>
+        </span>
+      </button>
+
+      <div class="top-actions">
+        <div id="timerWrap" class="timer hidden">
+          <span id="timer" class="timer-value">25:00</span>
+          <button id="pauseBtn" class="timer-btn" type="button" aria-label="Pause the timer" title="Pause">⏸</button>
+        </div>
+        <button id="soundBtn" class="icon-btn" type="button" aria-label="Mute sounds" title="Sound">🔊</button>
+      </div>
+    </header>
+
+    <main>
+
+      <!-- ============================ START ============================ -->
+      <section id="screen-start" class="screen">
+
+        <div class="hero">
+          <p class="kicker">A WH-question escape room · English A1.2</p>
+          <h1>MALL<br /><span class="neon">AFTER DARK</span></h1>
+          <p class="tagline">Four rooms. Four codes. One exit.</p>
+        </div>
+
+        <div class="start-grid">
+          <div class="panel story-panel">
+            <h2>🌙 The story</h2>
+            <p>
+              It's 7:45 p.m. at the City Mall. You and your team are here for the
+              midnight film when every door locks. On the floor you find a note:
+            </p>
+            <p class="note-on-floor">
+              “Four rooms. Four codes. In each room, only the <strong>WH questions</strong>
+              have the correct numbers. Find them, open the doors, and escape before
+              the film ends.”
+            </p>
+
+            <ol class="steps">
+              <li><span>1</span> Read the seven question tickets in each room.</li>
+              <li><span>2</span> Select the four WH questions. Their numbers make the code.</li>
+              <li><span>3</span> Enter the code, complete the team mission and move on.</li>
+            </ol>
+
+            <p class="micro">Yes/No questions have numbers too — but they are decoys. You have <strong>3 hints</strong> for the whole escape.</p>
+          </div>
+
+          <div class="panel setup-panel">
+            <h2>🎟️ Your team</h2>
+
+            <label class="field-label" for="teamInput">Team name</label>
+            <input id="teamInput" class="text-input" type="text" maxlength="26" placeholder="Team 1" autocomplete="off" />
+
+            <p class="field-label">Challenge mode</p>
+            <div id="timerChoices" class="segmented" role="group" aria-label="Timer mode">
+              <button type="button" data-timer="25" class="seg-btn is-on">⏱ 25 min</button>
+              <button type="button" data-timer="0" class="seg-btn">🧘 No timer</button>
+            </div>
+
+            <button id="startBtn" class="btn primary big" type="button">🚪 Enter the mall</button>
+
+            <div id="resumeWrap" class="resume hidden">
+              <p id="resumeInfo" class="micro"></p>
+              <button id="resumeBtn" class="btn secondary" type="button">▶ Continue the escape</button>
+            </div>
+
+            <p class="micro" style="margin-top:0.8rem">One device per team. Speak English during the missions.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================ MAP ============================ -->
+      <section id="screen-map" class="screen hidden">
+        <div class="map-top">
+          <div>
+            <p class="kicker">The City Mall · 7:45 p.m.</p>
+            <h2 id="mapTitle">Four shops. Four codes.</h2>
+            <p id="mapSub" class="muted">Enter the first room and find the WH questions.</p>
+          </div>
+          <div id="roomTrack" class="room-track" aria-label="Rooms cleared"></div>
+        </div>
+
+        <div id="roomGrid" class="map-grid"></div>
+
+        <div class="map-bottom">
+          <p class="micro">Each room has its own code. Clear a room to unlock the next one.</p>
+          <button id="restartBtn" class="link-btn" type="button">↺ Restart the escape</button>
+        </div>
+      </section>
+
+      <!-- ============================ ROOM ============================ -->
+      <section id="screen-room" class="screen hidden">
+        <div class="room-top">
+          <button id="backToMap" class="back-btn" type="button">← Mall map</button>
+          <div class="room-heading">
+            <span id="roomIcon" class="room-heading-icon">🎬</span>
+            <div>
+              <h2 id="roomTitle">The Projection Room</h2>
+              <p id="roomTopic" class="micro">Movies</p>
+            </div>
+          </div>
+          <button id="roomHintBtn" class="hint-btn" type="button">💡 Hint <span id="hintLeft">3</span></button>
+        </div>
+
+        <div id="roomContent" class="room-content"></div>
+      </section>
+
+      <!-- ============================ WIN ============================ -->
+      <section id="screen-win" class="screen hidden">
+        <div id="confetti" class="confetti" aria-hidden="true"></div>
+        <div class="win-card">
+          <p class="kicker">The doors are open</p>
+          <h2 class="win-title">YOU ESCAPED!</h2>
+          <p class="win-story">
+            The mall lights come back on. The film is starting and the popcorn is
+            warm. Great detective work, team!
+          </p>
+          <div id="winStats" class="stats"></div>
+          <p id="winRank" class="rank"></p>
+          <p id="winCodes" class="micro"></p>
+
+          <div class="win-actions">
+            <button id="playAgain" class="btn primary" type="button">🔁 Play again</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ============================ MISSION MODAL ============================ -->
+  <div id="modalMission" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="missionTitle">
+    <div class="modal-card">
+      <button class="modal-close" type="button" data-close aria-label="Close">×</button>
+      <div class="unlock-badge" aria-hidden="true">🔓</div>
+      <p class="kicker">The door is open</p>
+      <h2 id="missionTitle">Team mission</h2>
+      <p id="missionIntro" class="muted"></p>
+
+      <div id="missionBox" class="mission"></div>
+
+      <label class="mission-check">
+        <input type="checkbox" id="missionCheck" />
+        <span>We completed the speaking mission in English.</span>
+      </label>
+
+      <button id="missionBtn" class="btn primary" type="button" disabled>Complete mission →</button>
+      <p class="micro">Your teacher can check the mission before you continue.</p>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="escape-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
