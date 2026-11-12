@@ -9,7 +9,7 @@
   const $ = (id) => document.getElementById(id);
 
   const PREFS_KEY = "mad-prefs-v2";
-  const SAVE_KEY = "mad-save-v2";
+  const SAVE_KEY = "mad-save-v3";
   const HINTS_TOTAL = 3;
   const PENALTY = 20;
   const CODE_LENGTH = 5;
