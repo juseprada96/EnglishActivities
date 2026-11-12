@@ -12,6 +12,7 @@
   const SAVE_KEY = "mad-save-v2";
   const HINTS_TOTAL = 3;
   const PENALTY = 20;
+  const CODE_LENGTH = 5;
 
   const PALETTE = ["#2ee6c5", "#ffc857", "#b79cff", "#59c2ff", "#ff7d8a", "#3ddc97"];
 
@@ -26,6 +27,7 @@
     started: false,
     finished: false,
     team: "Team 1",
+    members: ["", "", "", "", ""],
     timerMode: 25,
     timerLeft: 25 * 60,
     timerRunning: false,
@@ -54,6 +56,7 @@
     pauseBtn: $("pauseBtn"),
     soundBtn: $("soundBtn"),
     teamInput: $("teamInput"),
+    memberInputs: [...document.querySelectorAll(".member-input")],
     timerChoices: $("timerChoices"),
     startBtn: $("startBtn"),
     resumeWrap: $("resumeWrap"),
@@ -73,13 +76,13 @@
     roomContent: $("roomContent"),
     winStats: $("winStats"),
     winRank: $("winRank"),
+    winMembers: $("winMembers"),
     winCodes: $("winCodes"),
     playAgain: $("playAgain"),
     modalMission: $("modalMission"),
     missionTitle: $("missionTitle"),
     missionIntro: $("missionIntro"),
     missionBox: $("missionBox"),
-    missionCheck: $("missionCheck"),
     missionBtn: $("missionBtn"),
     toast: $("toast")
   };
@@ -115,6 +118,60 @@
   function nextRoom(room) {
     const idx = roomIndex(room.id);
     return DATA.rooms[idx + 1] || null;
+  }
+
+  function readMemberInputs() {
+    return ui.memberInputs.map((input) => input.value.trim());
+  }
+
+  function fillMemberInputs(members) {
+    const list = Array.isArray(members) ? members : [];
+    ui.memberInputs.forEach((input, i) => { input.value = list[i] || ""; });
+  }
+
+  function memberNames() {
+    return state.members.map((name) => name.trim()).filter(Boolean);
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[ch]));
+  }
+
+  function missionSteps(room) {
+    const whCards = room.cards.filter((card) => card.wh).slice(0, CODE_LENGTH);
+    let names = memberNames().slice(0, CODE_LENGTH);
+    if (!names.length) {
+      names = Array.from({ length: CODE_LENGTH }, (_, i) => `Member ${i + 1}`);
+    }
+    return whCards.map((card, i) => ({
+      index: i + 1,
+      asker: names[i % names.length],
+      answerer: names[(i + 1) % names.length],
+      question: card.q,
+      number: card.n
+    }));
+  }
+
+  function missionStepBody(step) {
+    return `
+      <span class="mission-step-body">
+        <span class="mission-step-head"><span class="mission-step-num">${step.index}</span> <strong>${escapeHtml(step.asker)}</strong> asks <strong>${escapeHtml(step.answerer)}</strong></span>
+        <span class="mission-step-question">“${escapeHtml(step.question)}”</span>
+      </span>`;
+  }
+
+  function missionStepsHtml(room, interactive) {
+    return missionSteps(room).map((step) => (
+      interactive
+        ? `<label class="mission-step"><input type="checkbox" class="mission-step-check" data-step="${step.index}" aria-label="Question ${step.index} completed" />${missionStepBody(step)}</label>`
+        : `<div class="mission-step is-static">${missionStepBody(step)}</div>`
+    )).join("");
   }
 
   /* -------------------------------- SOUND ------------------------------ */
@@ -171,6 +228,9 @@
       const p = JSON.parse(localStorage.getItem(PREFS_KEY));
       if (!p) return;
       if (p.team) state.team = p.team;
+      if (Array.isArray(p.members)) {
+        state.members = p.members.slice(0, 5).map((name) => String(name || ""));
+      }
       if (p.timerMode === 0 || p.timerMode === 25) state.timerMode = p.timerMode;
       if (typeof p.soundOn === "boolean") state.soundOn = p.soundOn;
     } catch (_) { /* ignore */ }
@@ -180,6 +240,7 @@
     try {
       localStorage.setItem(PREFS_KEY, JSON.stringify({
         team: state.team,
+        members: state.members,
         timerMode: state.timerMode,
         soundOn: state.soundOn
       }));
@@ -199,6 +260,7 @@
       });
       localStorage.setItem(SAVE_KEY, JSON.stringify({
         team: state.team,
+        members: state.members,
         timerMode: state.timerMode,
         hintsLeft: state.hintsLeft,
         hintsUsed: state.hintsUsed,
@@ -365,8 +427,8 @@
       : current && state.rooms[current.id].codeOpen
         ? `${current.title}: the door is open. Complete the team mission.`
         : current
-          ? `Enter ${current.title} and find the four WH questions.`
-          : "Find the four WH questions.";
+          ? `Enter ${current.title} and find the five WH questions.`
+          : "Find the five WH questions.";
   }
 
   function renderMapAndShow() {
@@ -420,7 +482,7 @@
     ui.roomContent.innerHTML = `
       <p class="room-intro">${room.intro}</p>
       <div class="task-line">
-        <span>Select the four WH questions.</span>
+        <span>Select the five WH questions.</span>
         <span class="micro">Their numbers make the code, in card order.</span>
       </div>
 
@@ -461,7 +523,7 @@
       });
 
       slots.innerHTML = "";
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < CODE_LENGTH; i++) {
         const idx = selected[i];
         const slot = document.createElement("div");
         slot.className = "code-slot" + (idx === undefined ? " empty" : " filled");
@@ -471,7 +533,7 @@
         slots.appendChild(slot);
       }
 
-      tryBtn.disabled = selected.length !== 4 || locked;
+      tryBtn.disabled = selected.length !== CODE_LENGTH || locked;
       clearBtn.disabled = selected.length === 0 || locked;
     }
 
@@ -481,8 +543,8 @@
         if (selected.includes(i)) {
           selected = selected.filter((x) => x !== i);
         } else {
-          if (selected.length >= 4) {
-            setFeedback(fb, "bad", "Only four questions can be selected. Deselect one first.");
+          if (selected.length >= CODE_LENGTH) {
+            setFeedback(fb, "bad", "Only five questions can be selected. Deselect one first.");
             ticket.classList.add("shake");
             setTimeout(() => ticket.classList.remove("shake"), 420);
             return;
@@ -502,7 +564,7 @@
     });
 
     tryBtn.addEventListener("click", () => {
-      if (locked || selected.length !== 4) return;
+      if (locked || selected.length !== CODE_LENGTH) return;
       const code = selected.map((i) => room.cards[i].n).join("");
 
       if (code === room.code) {
@@ -571,7 +633,8 @@
       </div>
 
       <div class="mission">
-        <ul>${room.mission.tasks.map((t) => `<li>${t}</li>`).join("")}</ul>
+        <p class="mission-label">Question chain</p>
+        <div class="mission-steps">${missionStepsHtml(room, false)}</div>
       </div>
 
       <div class="solved-actions" style="margin-top:1rem">
@@ -600,7 +663,8 @@
       </div>
 
       <div class="mission">
-        <ul>${room.mission.tasks.map((t) => `<li>${t}</li>`).join("")}</ul>
+        <p class="mission-label">Question chain</p>
+        <div class="mission-steps">${missionStepsHtml(room, false)}</div>
       </div>
 
       <div class="solved-actions" style="margin-top:1rem">
@@ -619,24 +683,27 @@
     state.pendingMissionRoom = room.id;
     ui.missionTitle.textContent = `${room.icon} ${room.title}`;
     ui.missionIntro.textContent = room.mission.intro;
-    ui.missionBox.innerHTML = `<ul>${room.mission.tasks.map((t) => `<li>${t}</li>`).join("")}</ul>`;
-    ui.missionCheck.checked = false;
-    ui.missionCheck.disabled = false;
+    ui.missionBox.innerHTML = `
+      <p class="mission-label">Question chain</p>
+      <div class="mission-steps">${missionStepsHtml(room, true)}</div>`;
     ui.missionBtn.disabled = true;
     ui.missionBtn.textContent = nextRoom(room)
       ? "Complete mission → next room"
       : "Complete mission → open the exit";
 
     openModal(ui.modalMission);
-    ui.missionCheck.focus({ preventScroll: true });
+    const firstCheck = ui.missionBox.querySelector(".mission-step-check");
+    if (firstCheck) firstCheck.focus({ preventScroll: true });
   }
 
-  ui.missionCheck.addEventListener("change", () => {
-    ui.missionBtn.disabled = !ui.missionCheck.checked;
+  ui.missionBox.addEventListener("change", () => {
+    const checks = [...ui.missionBox.querySelectorAll(".mission-step-check")];
+    ui.missionBtn.disabled = checks.length === 0 || checks.some((check) => !check.checked);
   });
 
   ui.missionBtn.addEventListener("click", () => {
-    if (!ui.missionCheck.checked || !state.pendingMissionRoom) return;
+    const checks = [...ui.missionBox.querySelectorAll(".mission-step-check")];
+    if (!checks.length || checks.some((check) => !check.checked) || !state.pendingMissionRoom) return;
     const room = roomById(state.pendingMissionRoom);
     if (!room) return;
 
@@ -702,8 +769,10 @@
       <div class="stat"><span class="stat-label">Time</span><span class="stat-value">${fmt(used)}</span></div>
       <div class="stat"><span class="stat-label">Hints</span><span class="stat-value">${state.hintsUsed} / 3</span></div>
       <div class="stat"><span class="stat-label">Wrong codes</span><span class="stat-value">${state.wrongCodes}</span></div>
-      <div class="stat"><span class="stat-label">Team</span><span class="stat-value">${state.team}</span></div>`;
+      <div class="stat"><span class="stat-label">Team</span><span class="stat-value">${escapeHtml(state.team)}</span></div>`;
     ui.winRank.textContent = rank;
+    const names = memberNames();
+    ui.winMembers.textContent = names.length ? `Detectives: ${names.join(" · ")}` : "";
     ui.winCodes.textContent = `Room codes: ${DATA.rooms.map((r) => r.code).join(" · ")}`;
 
     const confetti = $("confetti");
@@ -724,6 +793,7 @@
   /* -------------------------------- GAME ------------------------------- */
   function startGame() {
     state.team = ui.teamInput.value.trim() || "Team 1";
+    state.members = readMemberInputs();
     state.started = true;
     state.finished = false;
     state.hintsLeft = HINTS_TOTAL;
@@ -739,7 +809,7 @@
     setupTimer();
     renderMap();
     showScreen("map");
-    toast(`Welcome, ${state.team}! Find the four WH questions in Room 1.`);
+    toast(`Welcome, ${state.team}! Find the five WH questions in Room 1.`);
     snapshot();
   }
 
@@ -765,6 +835,9 @@
     if (!save) return;
 
     state.team = save.team || "Team 1";
+    state.members = Array.isArray(save.members)
+      ? save.members.slice(0, 5).map((name) => String(name || ""))
+      : ["", "", "", "", ""];
     state.timerMode = save.timerMode === 0 ? 0 : 25;
     state.hintsLeft = typeof save.hintsLeft === "number" ? save.hintsLeft : HINTS_TOTAL;
     state.hintsUsed = save.hintsUsed || 0;
@@ -785,6 +858,7 @@
     state.activeRoom = null;
 
     ui.teamInput.value = state.team;
+    fillMemberInputs(state.members);
     ui.timerChoices.querySelectorAll(".seg-btn").forEach((b) => {
       b.classList.toggle("is-on", Number(b.dataset.timer) === state.timerMode);
     });
@@ -822,6 +896,13 @@
   ui.teamInput.addEventListener("change", () => {
     state.team = ui.teamInput.value.trim() || "Team 1";
     savePrefs();
+  });
+
+  ui.memberInputs.forEach((input) => {
+    input.addEventListener("change", () => {
+      state.members = readMemberInputs();
+      savePrefs();
+    });
   });
 
   ui.soundBtn.addEventListener("click", () => {
@@ -867,6 +948,7 @@
     resetGame();
     showScreen("start");
     ui.teamInput.value = state.team;
+    fillMemberInputs(state.members);
     ui.timerChoices.querySelectorAll(".seg-btn").forEach((b) => {
       b.classList.toggle("is-on", Number(b.dataset.timer) === state.timerMode);
     });
@@ -883,6 +965,7 @@
   /* ----------------------------- INITIALISE ---------------------------- */
   loadPrefs();
   ui.teamInput.value = state.team;
+  fillMemberInputs(state.members);
   ui.timerChoices.querySelectorAll(".seg-btn").forEach((b) => {
     b.classList.toggle("is-on", Number(b.dataset.timer) === state.timerMode);
   });
