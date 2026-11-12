@@ -2,6 +2,8 @@
 
 An **English-only** escape room for **A1.2** students. Teams solve four rooms, find the four-digit code hidden among WH questions, complete a speaking mission, and escape the mall before the film starts.
 
+**▶ Play online:** <https://juseprada96.github.io/EnglishActivities/>
+
 ![The Projection Room](screenshot.png)
 
 - Static site: HTML + CSS + JavaScript. No build, no dependencies.
